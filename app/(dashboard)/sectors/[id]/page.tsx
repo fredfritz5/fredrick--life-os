@@ -12,6 +12,23 @@ import { GoalHierarchy } from '@/components/goals/GoalHierarchy';
 import { getSectorIcon, getCurrentYear } from '@/lib/utils';
 import { toast } from 'sonner';
 import type { Sector, YearlyGoal, MonthlyGoal, WeeklyGoal, DailyGoal, SectorNote, AccountabilityCommitment } from '@/types';
+import dynamic from 'next/dynamic';
+
+// Lazy-load specialized sector pages so they don't bloat the main bundle
+const POSSalesPage = dynamic(() => import('@/components/pos/POSSalesPage').then((m) => ({ default: m.POSSalesPage })), { ssr: false });
+const AIBuildPage = dynamic(() => import('@/components/ai-build/AIBuildPage').then((m) => ({ default: m.AIBuildPage })), { ssr: false });
+const AIResearchPage = dynamic(() => import('@/components/ai-research/AIResearchPage').then((m) => ({ default: m.AIResearchPage })), { ssr: false });
+const AcademicsPage = dynamic(() => import('@/components/academics/AcademicsPage').then((m) => ({ default: m.AcademicsPage })), { ssr: false });
+
+function resolveSectorType(sector: Sector): string | null {
+  if (sector.sectorType) return sector.sectorType;
+  const name = sector.name.toLowerCase();
+  if (name.includes('pos sales')) return 'pos-sales';
+  if (name.includes('ai sales') || name.includes('market fit')) return 'ai-sales';
+  if (name.includes('agentic ai build')) return 'ai-build';
+  if (name === 'academics') return 'academics';
+  return null;
+}
 
 export default function SectorPage() {
   const { id } = useParams<{ id: string }>();
@@ -107,8 +124,11 @@ export default function SectorPage() {
   if (loading) return <div className="flex items-center justify-center h-64"><div className="animate-pulse text-muted-foreground">Loading…</div></div>;
   if (!sector) return <div className="text-center py-20 text-muted-foreground">Sector not found</div>;
 
+  const sectorType = resolveSectorType(sector);
+
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex items-center gap-3">
         <Link href="/">
           <Button variant="ghost" size="icon" className="h-8 w-8">
@@ -139,80 +159,87 @@ export default function SectorPage() {
         )}
       </div>
 
-      <Tabs defaultValue="goals">
-        <TabsList>
-          <TabsTrigger value="goals">Goals</TabsTrigger>
-          <TabsTrigger value="notes">Journal</TabsTrigger>
-          <TabsTrigger value="commitments">Commitments</TabsTrigger>
-        </TabsList>
+      {/* Specialized sector view */}
+      {sectorType === 'pos-sales' && <POSSalesPage sectorId={sector.id} />}
+      {sectorType === 'ai-build' && <AIBuildPage />}
+      {sectorType === 'ai-sales' && <AIResearchPage />}
+      {sectorType === 'academics' && <AcademicsPage />}
 
-        <TabsContent value="goals" className="mt-4">
-          <GoalHierarchy
-            sector={sector}
-            yearlyGoals={yearlyGoals}
-            monthlyGoals={monthlyGoals}
-            weeklyGoals={weeklyGoals}
-            dailyGoals={dailyGoals}
-            onRefresh={loadData}
-          />
-        </TabsContent>
+      {/* Standard tabs (Goals / Journal / Commitments) — always visible */}
+      <div className={sectorType ? 'border-t pt-6' : ''}>
+        {sectorType && <p className="text-xs font-semibold uppercase text-muted-foreground mb-4 tracking-wide">Goals & Planning</p>}
+        <Tabs defaultValue="goals">
+          <TabsList>
+            <TabsTrigger value="goals">Goals</TabsTrigger>
+            <TabsTrigger value="notes">Journal</TabsTrigger>
+            <TabsTrigger value="commitments">Commitments</TabsTrigger>
+          </TabsList>
 
-        <TabsContent value="notes" className="mt-4 space-y-4">
-          <Card>
-            <CardContent className="pt-4">
-              <Textarea
-                placeholder={`Journal about your ${sector.name} work today…`}
-                value={newNote}
-                onChange={(e) => setNewNote(e.target.value)}
-                rows={4}
-                className="resize-none"
-              />
-              <Button className="mt-2" onClick={saveNote} disabled={!newNote.trim()}>
-                Save Note
-              </Button>
-            </CardContent>
-          </Card>
+          <TabsContent value="goals" className="mt-4">
+            <GoalHierarchy
+              sector={sector}
+              yearlyGoals={yearlyGoals}
+              monthlyGoals={monthlyGoals}
+              weeklyGoals={weeklyGoals}
+              dailyGoals={dailyGoals}
+              onRefresh={loadData}
+            />
+          </TabsContent>
 
-          {notes.map((note) => (
-            <Card key={note.id}>
+          <TabsContent value="notes" className="mt-4 space-y-4">
+            <Card>
               <CardContent className="pt-4">
-                <p className="text-xs text-muted-foreground mb-1">{String(note.date)}</p>
-                <p className="text-sm whitespace-pre-wrap">{note.text}</p>
+                <Textarea
+                  placeholder={`Journal about your ${sector.name} work today…`}
+                  value={newNote}
+                  onChange={(e) => setNewNote(e.target.value)}
+                  rows={4}
+                  className="resize-none"
+                />
+                <Button className="mt-2" onClick={saveNote} disabled={!newNote.trim()}>
+                  Save Note
+                </Button>
               </CardContent>
             </Card>
-          ))}
-        </TabsContent>
-
-        <TabsContent value="commitments" className="mt-4 space-y-3">
-          {commitments.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground border border-dashed rounded-lg">
-              <p>No commitments for this sector yet</p>
-              <Link href="/accountability">
-                <Button variant="outline" size="sm" className="mt-2">
-                  Go to Accountability
-                </Button>
-              </Link>
-            </div>
-          ) : (
-            commitments.map((c) => (
-              <Card key={c.id}>
+            {notes.map((note) => (
+              <Card key={note.id}>
                 <CardContent className="pt-4">
-                  <div className="flex items-start gap-2">
-                    <span className={`text-sm font-medium ${c.status === 'honored' ? 'text-green-600' : c.status === 'broken' ? 'text-red-600' : 'text-yellow-600'}`}>
-                      {c.status === 'honored' ? '✓' : c.status === 'broken' ? '✗' : '○'}
-                    </span>
-                    <div>
-                      <p className="text-sm">{c.text}</p>
-                      <p className="text-xs text-muted-foreground mt-0.5">{String(c.date_made)}</p>
-                      {c.notes && <p className="text-xs text-muted-foreground mt-1">{c.notes}</p>}
-                    </div>
-                  </div>
+                  <p className="text-xs text-muted-foreground mb-1">{String(note.date)}</p>
+                  <p className="text-sm whitespace-pre-wrap">{note.text}</p>
                 </CardContent>
               </Card>
-            ))
-          )}
-        </TabsContent>
-      </Tabs>
+            ))}
+          </TabsContent>
+
+          <TabsContent value="commitments" className="mt-4 space-y-3">
+            {commitments.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground border border-dashed rounded-lg">
+                <p>No commitments for this sector yet</p>
+                <Link href="/accountability">
+                  <Button variant="outline" size="sm" className="mt-2">Go to Accountability</Button>
+                </Link>
+              </div>
+            ) : (
+              commitments.map((c) => (
+                <Card key={c.id}>
+                  <CardContent className="pt-4">
+                    <div className="flex items-start gap-2">
+                      <span className={`text-sm font-medium ${c.status === 'honored' ? 'text-green-600' : c.status === 'broken' ? 'text-red-600' : 'text-yellow-600'}`}>
+                        {c.status === 'honored' ? '✓' : c.status === 'broken' ? '✗' : '○'}
+                      </span>
+                      <div>
+                        <p className="text-sm">{c.text}</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">{String(c.date_made)}</p>
+                        {c.notes && <p className="text-xs text-muted-foreground mt-1">{c.notes}</p>}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))
+            )}
+          </TabsContent>
+        </Tabs>
+      </div>
     </div>
   );
 }

@@ -25,6 +25,7 @@ export interface Sector {
   description: string | null;
   verificationCriteria: string | null;
   visionRequired: boolean;
+  sectorType: string | null; // general | pos-sales | ai-sales | ai-build | academics
   order: number;
   createdAt: Date | string;
   // legacy aliases

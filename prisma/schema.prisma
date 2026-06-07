@@ -14,17 +14,50 @@ model User {
   name      String?
   createdAt DateTime @default(now())
 
-  profile       UserProfile?
-  sectors       Sector[]
-  yearlyGoals   YearlyGoal[]
-  monthlyGoals  MonthlyGoal[]
-  weeklyGoals   WeeklyGoal[]
-  dailyGoals    DailyGoal[]
-  commitments   AccountabilityCommitment[]
-  sectorNotes   SectorNote[]
-  personalFacts PersonalFact[]
-  achievements  Achievement[]
-  alertSettings AlertSettings?
+  profile              UserProfile?
+  sectors              Sector[]
+  yearlyGoals          YearlyGoal[]
+  monthlyGoals         MonthlyGoal[]
+  weeklyGoals          WeeklyGoal[]
+  dailyGoals           DailyGoal[]
+  commitments          AccountabilityCommitment[]
+  sectorNotes          SectorNote[]
+  personalFacts        PersonalFact[]
+  achievements         Achievement[]
+  alertSettings        AlertSettings?
+
+  // POS Sales
+  pipelineStages       PipelineStage[]
+  prospects            Prospect[]
+  prospectTouches      ProspectTouch[]
+  discoveryQuestions   DiscoveryQuestion[]
+  discoveryResponses   DiscoveryResponse[]
+  objections           Objection[]
+  prospectObjections   ProspectObjection[]
+  deals                Deal[]
+  commissionPayments   CommissionPayment[]
+  followUpTemplates    FollowUpTemplate[]
+  weeklySalesTargets   WeeklySalesTarget[]
+
+  // AI Sales Research
+  restaurantResearch   RestaurantResearch[]
+  restaurantQuotes     RestaurantQuote[]
+  researchThemes       ResearchTheme[]
+  researchInsights     ResearchInsight[]
+
+  // AI Build
+  coursePhases         CoursePhase[]
+  courseVideos         CourseVideo[]
+  courseGuides         CourseGuide[]
+  courseLabs           CourseLab[]
+  productFeatures      ProductFeature[]
+  codeLogs             CodeLog[]
+
+  // Academics
+  academicCourses      AcademicCourse[]
+  academicAssignments  AcademicAssignment[]
+  studySessions        StudySession[]
+  examPreps            ExamPrep[]
 }
 
 model UserProfile {
@@ -48,6 +81,7 @@ model Sector {
   description          String?
   verificationCriteria String?
   visionRequired       Boolean  @default(true)
+  sectorType           String?  // general | pos-sales | ai-sales | ai-build | academics
   order                Int      @default(0)
   createdAt            DateTime @default(now())
 
@@ -190,4 +224,483 @@ model AlertSettings {
   soundMutedGlobal Boolean  @default(false)
   eveningAlertTime String   @default("21:00")
   createdAt        DateTime @default(now())
+}
+
+// ─────────────────────────────────────────────
+// POS SALES CRM
+// ─────────────────────────────────────────────
+
+model PipelineStage {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  sortOrder Int      @default(0)
+  color     String   @default("#6366f1")
+  isDefault Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  prospects Prospect[]
+
+  @@index([userId])
+}
+
+model Prospect {
+  id              String        @id @default(cuid())
+  userId          String
+  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  restaurantName  String
+  location        String?
+  ownerName       String?
+  phone           String?
+  instagram       String?
+  linkedin        String?
+  source          String?
+  estimatedTier   String        @default("unknown") // Starter | Professional | Enterprise | unknown
+  pipelineStageId String
+  pipelineStage   PipelineStage @relation(fields: [pipelineStageId], references: [id])
+  status          String        @default("active") // active | won | lost | archived
+  compoundingNotes String?
+  lastTouchDate   DateTime?
+  dateAdded       DateTime      @default(now())
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  touches            ProspectTouch[]
+  discoveryResponses DiscoveryResponse[]
+  prospectObjections ProspectObjection[]
+  deal               Deal?
+  restaurantResearch RestaurantResearch?
+
+  @@index([userId])
+  @@index([pipelineStageId])
+}
+
+model ProspectTouch {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  prospectId String
+  prospect   Prospect @relation(fields: [prospectId], references: [id], onDelete: Cascade)
+  touchDate  DateTime @default(now())
+  channel    String   // in-person | WhatsApp | LinkedIn | phone | email
+  touchType  String   // initial-contact | discovery | demo | follow-up | closing-call | post-sale | custom
+  notes      String?
+  outcome    String?  // no-response | meeting-scheduled | objection-raised | advanced | declined | other
+  createdAt  DateTime @default(now())
+
+  @@index([userId])
+  @@index([prospectId])
+}
+
+model DiscoveryQuestion {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category     String   // orders | inventory | finance | staff | growth | custom
+  questionText String
+  sortOrder    Int      @default(0)
+  isDefault    Boolean  @default(true)
+  createdAt    DateTime @default(now())
+
+  responses DiscoveryResponse[]
+
+  @@index([userId])
+}
+
+model DiscoveryResponse {
+  id           String            @id @default(cuid())
+  userId       String
+  user         User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  prospectId   String
+  prospect     Prospect          @relation(fields: [prospectId], references: [id], onDelete: Cascade)
+  questionId   String
+  question     DiscoveryQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  responseText String
+  capturedAt   DateTime          @default(now())
+
+  @@index([userId])
+  @@index([prospectId])
+}
+
+model Objection {
+  id               String   @id @default(cuid())
+  userId           String
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name             String
+  standardResponse String?
+  isDefault        Boolean  @default(true)
+  createdAt        DateTime @default(now())
+
+  prospectObjections ProspectObjection[]
+
+  @@index([userId])
+}
+
+model ProspectObjection {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  prospectId  String
+  prospect    Prospect  @relation(fields: [prospectId], references: [id], onDelete: Cascade)
+  objectionId String
+  objection   Objection @relation(fields: [objectionId], references: [id], onDelete: Cascade)
+  raisedDate  DateTime  @default(now())
+  howHandled  String?
+  resolved    Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+
+  @@index([userId])
+  @@index([prospectId])
+}
+
+model Deal {
+  id                   String   @id @default(cuid())
+  userId               String
+  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  prospectId           String   @unique
+  prospect             Prospect @relation(fields: [prospectId], references: [id], onDelete: Cascade)
+  tier                 String   // Starter | Professional | Enterprise
+  monthlySubscriptionKsh Int
+  startDate            DateTime @default(now())
+  status               String   @default("active") // active | churned
+  notesForCompounding  String?
+  createdAt            DateTime @default(now())
+
+  commissionPayments CommissionPayment[]
+
+  @@index([userId])
+}
+
+model CommissionPayment {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  dealId      String
+  deal        Deal     @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  paymentDate DateTime @default(now()) @db.Date
+  amountKsh   Int
+  notes       String?
+  createdAt   DateTime @default(now())
+
+  @@index([userId])
+  @@index([dealId])
+}
+
+model FollowUpTemplate {
+  id                String   @id @default(cuid())
+  userId            String
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  touchNumber       Int
+  daysAfterPrevious Int
+  channel           String
+  suggestedContent  String?
+  createdAt         DateTime @default(now())
+
+  @@index([userId])
+}
+
+model WeeklySalesTarget {
+  id                 String   @id @default(cuid())
+  userId             String
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  weekStarting       DateTime @db.Date
+  contactsTarget     Int      @default(0)
+  discoveriesTarget  Int      @default(0)
+  demosTarget        Int      @default(0)
+  closesTarget       Int      @default(0)
+  contactsActual     Int      @default(0)
+  discoveriesActual  Int      @default(0)
+  demosActual        Int      @default(0)
+  closesActual       Int      @default(0)
+  reflectionNote     String?
+  createdAt          DateTime @default(now())
+
+  @@unique([userId, weekStarting])
+  @@index([userId])
+}
+
+// ─────────────────────────────────────────────
+// AI SALES RESEARCH
+// ─────────────────────────────────────────────
+
+model RestaurantResearch {
+  id                        String    @id @default(cuid())
+  userId                    String
+  user                      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  linkedProspectId          String?   @unique
+  linkedProspect            Prospect? @relation(fields: [linkedProspectId], references: [id], onDelete: SetNull)
+  restaurantName            String
+  location                  String?
+  ownerName                 String?
+  contactInfo               String?
+  dateFirstEngaged          DateTime? @db.Date
+  ordersPerDay              Int?
+  branches                  Int?
+  whatsappOrderingLevel     String    @default("none") // none | low | medium | high
+  whatsappOrderingNotes     String?
+  mpesaPainPoints           String?
+  loyaltyComments           String?
+  automationAppetite        Int       @default(3) // 1-5
+  automationAppetiteNotes   String?
+  digitalComfortLevel       Int       @default(3) // 1-5
+  candidateStrength         String    @default("Medium") // Strong | Medium | Weak
+  candidateStrengthReasoning String?
+  lastContactDate           DateTime? @db.Date
+  followUpDueDate           DateTime? @db.Date
+  status                    String    @default("active-research") // active-research | monitoring | future-prospect | not-suitable
+  notes                     String?
+  createdAt                 DateTime  @default(now())
+  updatedAt                 DateTime  @updatedAt
+
+  quotes RestaurantQuote[]
+
+  @@index([userId])
+}
+
+model RestaurantQuote {
+  id                   String             @id @default(cuid())
+  userId               String
+  user                 User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  restaurantResearchId String
+  restaurant           RestaurantResearch @relation(fields: [restaurantResearchId], references: [id], onDelete: Cascade)
+  quoteText            String
+  context              String?
+  capturedDate         DateTime           @default(now()) @db.Date
+  createdAt            DateTime           @default(now())
+
+  themes   QuoteTheme[]
+  insights InsightQuote[]
+
+  @@index([userId])
+  @@index([restaurantResearchId])
+}
+
+model ResearchTheme {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  themeName   String
+  description String?
+  color       String   @default("#6366f1")
+  createdAt   DateTime @default(now())
+
+  quotes QuoteTheme[]
+
+  @@index([userId])
+}
+
+model QuoteTheme {
+  id      String          @id @default(cuid())
+  quoteId String
+  quote   RestaurantQuote @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  themeId String
+  theme   ResearchTheme   @relation(fields: [themeId], references: [id], onDelete: Cascade)
+
+  @@unique([quoteId, themeId])
+}
+
+model ResearchInsight {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  insightText String
+  insightDate DateTime @default(now()) @db.Date
+  status      String   @default("raw") // raw | validated | acted-on
+  createdAt   DateTime @default(now())
+
+  supportingQuotes InsightQuote[]
+
+  @@index([userId])
+}
+
+model InsightQuote {
+  id        String          @id @default(cuid())
+  insightId String
+  insight   ResearchInsight @relation(fields: [insightId], references: [id], onDelete: Cascade)
+  quoteId   String
+  quote     RestaurantQuote @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+
+  @@unique([insightId, quoteId])
+}
+
+// ─────────────────────────────────────────────
+// AGENTIC AI BUILD — COURSE TRACKER
+// ─────────────────────────────────────────────
+
+model CoursePhase {
+  id              String    @id @default(cuid())
+  userId          String
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  phaseNumber     Int
+  phaseName       String
+  description     String?
+  targetStartDate DateTime? @db.Date
+  targetEndDate   DateTime? @db.Date
+  actualStartDate DateTime? @db.Date
+  actualEndDate   DateTime? @db.Date
+  status          String    @default("not-started") // not-started | in-progress | complete
+  createdAt       DateTime  @default(now())
+
+  videos   CourseVideo[]
+  guides   CourseGuide[]
+  labs     CourseLab[]
+  features ProductFeature[]
+
+  @@index([userId])
+}
+
+model CourseVideo {
+  id              String      @id @default(cuid())
+  userId          String
+  user            User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  phaseId         String
+  phase           CoursePhase @relation(fields: [phaseId], references: [id], onDelete: Cascade)
+  videoNumber     Int
+  videoTitle      String
+  durationMinutes Int?
+  status          String      @default("not-watched") // not-watched | watched | rebuilt-from-memory | varied
+  notes           String?
+  watchedAt       DateTime?
+  createdAt       DateTime    @default(now())
+
+  @@index([userId])
+  @@index([phaseId])
+}
+
+model CourseGuide {
+  id         String      @id @default(cuid())
+  userId     String
+  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  phaseId    String
+  phase      CoursePhase @relation(fields: [phaseId], references: [id], onDelete: Cascade)
+  guideTitle String
+  status     String      @default("not-read") // not-read | read | applied
+  notes      String?
+  createdAt  DateTime    @default(now())
+
+  @@index([userId])
+  @@index([phaseId])
+}
+
+model CourseLab {
+  id             String      @id @default(cuid())
+  userId         String
+  user           User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  phaseId        String
+  phase          CoursePhase @relation(fields: [phaseId], references: [id], onDelete: Cascade)
+  labName        String
+  status         String      @default("not-started") // not-started | completed | varied
+  variationNotes String?
+  createdAt      DateTime    @default(now())
+
+  @@index([userId])
+  @@index([phaseId])
+}
+
+model ProductFeature {
+  id            String      @id @default(cuid())
+  userId        String
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  phaseId       String
+  phase         CoursePhase @relation(fields: [phaseId], references: [id], onDelete: Cascade)
+  featureName   String
+  description   String?
+  status        String      @default("planned") // planned | in-progress | done
+  dateCompleted DateTime?   @db.Date
+  notes         String?
+  createdAt     DateTime    @default(now())
+
+  @@index([userId])
+  @@index([phaseId])
+}
+
+model CodeLog {
+  id               String   @id @default(cuid())
+  userId           String
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  logDate          DateTime @default(now()) @db.Date
+  sectorContext    String?  // ai-build | pos-sales | ai-research | other
+  whatWasBuilt     String
+  timeSpentMinutes Int?
+  blockers         String?
+  whyQuestion      String?
+  createdAt        DateTime @default(now())
+
+  @@index([userId])
+  @@index([logDate])
+}
+
+// ─────────────────────────────────────────────
+// ACADEMICS
+// ─────────────────────────────────────────────
+
+model AcademicCourse {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  courseCode  String?
+  courseName  String
+  semester    String?
+  year        Int?
+  credits     Int?
+  instructor  String?
+  status      String   @default("current") // current | completed | planned
+  createdAt   DateTime @default(now())
+
+  assignments   AcademicAssignment[]
+  studySessions StudySession[]
+  examPreps     ExamPrep[]
+
+  @@index([userId])
+}
+
+model AcademicAssignment {
+  id             String         @id @default(cuid())
+  userId         String
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  courseId       String
+  course         AcademicCourse @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  assignmentName String
+  type           String         @default("homework") // homework | quiz | exam | project | paper | other
+  dueDate        DateTime?      @db.Date
+  status         String         @default("pending") // pending | in-progress | submitted | graded
+  grade          String?
+  notes          String?
+  createdAt      DateTime       @default(now())
+
+  @@index([userId])
+  @@index([courseId])
+}
+
+model StudySession {
+  id              String         @id @default(cuid())
+  userId          String
+  user            User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  courseId        String
+  course          AcademicCourse @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  sessionDate     DateTime       @default(now()) @db.Date
+  durationMinutes Int
+  topicCovered    String?
+  keyTakeaways    String?
+  createdAt       DateTime       @default(now())
+
+  @@index([userId])
+  @@index([courseId])
+}
+
+model ExamPrep {
+  id                String         @id @default(cuid())
+  userId            String
+  user              User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  courseId          String
+  course            AcademicCourse @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  examDate          DateTime?      @db.Date
+  topicsToCover     String?
+  preparationStatus Int            @default(0) // 0-100 percentage
+  studyPlan         String?
+  createdAt         DateTime       @default(now())
+
+  @@index([userId])
+  @@index([courseId])
 }
