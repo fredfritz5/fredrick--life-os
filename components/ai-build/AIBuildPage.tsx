@@ -33,7 +33,8 @@ const STATUS_COLORS: Record<string, string> = {
 
 export function AIBuildPage() {
   const [phases, setPhases] = useState<Phase[]>([]);
-  const [selectedPhase, setSelectedPhase] = useState<Phase | null>(null);
+  const [selectedPhaseId, setSelectedPhaseId] = useState<string | null>(null);
+  const selectedPhase = phases.find((p) => p.id === selectedPhaseId) ?? null;
   const [phaseVideos, setPhaseVideos] = useState<VideoItem[]>([]);
   const [codeLogs, setCodeLogs] = useState<CodeLogEntry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -57,7 +58,7 @@ export function AIBuildPage() {
   }, [loadPhases, loadCodeLogs]);
 
   async function selectPhase(phase: Phase) {
-    setSelectedPhase(phase);
+    setSelectedPhaseId(phase.id);
     const res = await fetch(`/api/ai-build/videos?phaseId=${phase.id}`);
     if (res.ok) setPhaseVideos(await res.json());
   }
@@ -132,7 +133,7 @@ export function AIBuildPage() {
               <div key={p.id} className="border rounded-lg overflow-hidden">
                 <div
                   className="flex items-center gap-3 p-3 cursor-pointer hover:bg-muted/30"
-                  onClick={() => selectPhase(selectedPhase?.id === p.id ? null as unknown as Phase : p)}
+                  onClick={() => selectedPhaseId === p.id ? setSelectedPhaseId(null) : selectPhase(p)}
                 >
                   <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: STATUS_COLORS[p.status] }} />
                   <div className="flex-1 min-w-0">
@@ -256,7 +257,7 @@ export function AIBuildPage() {
         <AddVideoModal
           phase={selectedPhase}
           onClose={() => setAddVideoOpen(false)}
-          onAdded={() => { setAddVideoOpen(false); selectPhase(selectedPhase); loadPhases(); }}
+          onAdded={() => { setAddVideoOpen(false); if (selectedPhase) selectPhase(selectedPhase); loadPhases(); }}
         />
       )}
     </div>
