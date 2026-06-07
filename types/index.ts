@@ -9,7 +9,7 @@ export interface UserProfile {
   currentFocus: string | null;
   bio: string | null;
   profilePhotoUrl: string | null;
-  createdAt: string;
+  createdAt: Date | string;
   // legacy aliases for components not yet updated
   display_name?: string;
   current_focus?: string | null;
@@ -26,7 +26,7 @@ export interface Sector {
   verificationCriteria: string | null;
   visionRequired: boolean;
   order: number;
-  createdAt: string;
+  createdAt: Date | string;
   // legacy aliases
   user_id?: string;
   verification_criteria?: string | null;
@@ -41,7 +41,7 @@ export interface YearlyGoal {
   year: number;
   text: string;
   status: GoalStatus;
-  createdAt: string;
+  createdAt: Date | string;
   sector?: Sector;
   monthlyGoals?: MonthlyGoal[];
 }
@@ -54,7 +54,7 @@ export interface MonthlyGoal {
   month: number;
   text: string;
   status: GoalStatus;
-  createdAt: string;
+  createdAt: Date | string;
   yearlyGoal?: YearlyGoal;
   weeklyGoals?: WeeklyGoal[];
   // legacy
@@ -70,7 +70,7 @@ export interface WeeklyGoal {
   weekNumber: number;
   text: string;
   status: GoalStatus;
-  createdAt: string;
+  createdAt: Date | string;
   monthlyGoal?: MonthlyGoal;
   dailyGoals?: DailyGoal[];
   // legacy
@@ -84,14 +84,14 @@ export interface DailyGoal {
   id: string;
   userId: string;
   weeklyGoalId: string;
-  date: string;
+  date: Date | string;
   text: string;
   status: DailyStatus;
   proofImageUrl: string | null;
   verificationResultJson: VerificationResult | null;
   manualOverrideReason: string | null;
-  completedAt: string | null;
-  createdAt: string;
+  completedAt: Date | string | null;
+  createdAt: Date | string;
   weeklyGoal?: WeeklyGoal & {
     monthlyGoal?: MonthlyGoal & {
       yearlyGoal?: YearlyGoal & { sector?: Sector };
@@ -102,7 +102,7 @@ export interface DailyGoal {
   proof_image_url?: string | null;
   verification_result_json?: VerificationResult | null;
   manual_override_reason?: string | null;
-  completed_at?: string | null;
+  completed_at?: Date | string | null;
   created_at?: string;
   weekly_goal?: WeeklyGoal & {
     monthly_goal?: MonthlyGoal & {
@@ -124,10 +124,10 @@ export interface AccountabilityCommitment {
   userId: string;
   sectorId: string | null;
   text: string;
-  dateMade: string;
+  dateMade: Date | string;
   status: CommitmentStatus;
   notes: string | null;
-  createdAt: string;
+  createdAt: Date | string;
   sector?: Sector;
   // legacy
   user_id?: string;
@@ -140,9 +140,9 @@ export interface SectorNote {
   id: string;
   userId: string;
   sectorId: string;
-  date: string;
+  date: Date | string;
   text: string;
-  createdAt: string;
+  createdAt: Date | string;
   // legacy
   user_id?: string;
   sector_id?: string;
@@ -154,7 +154,7 @@ export interface PersonalFact {
   userId: string;
   factType: string;
   content: string;
-  createdAt: string;
+  createdAt: Date | string;
   // legacy
   user_id?: string;
   fact_type?: string;
@@ -164,10 +164,10 @@ export interface PersonalFact {
 export interface Achievement {
   id: string;
   userId: string;
-  date: string;
+  date: Date | string;
   title: string;
   description: string | null;
-  createdAt: string;
+  createdAt: Date | string;
   // legacy
   user_id?: string;
   created_at?: string;
@@ -178,7 +178,7 @@ export interface AlertSettings {
   userId: string;
   soundMutedGlobal: boolean;
   eveningAlertTime: string;
-  createdAt: string;
+  createdAt: Date | string;
 }
 
 // Analytics types
