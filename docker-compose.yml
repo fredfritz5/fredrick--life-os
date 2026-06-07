@@ -1,0 +1,16 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: life_os_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: lifeos
+      POSTGRES_PASSWORD: lifeos_dev_password
+      POSTGRES_DB: fredrick_life_os
+    ports:
+      - "5433:5432"
+    volumes:
+      - life_os_pgdata:/var/lib/postgresql/data
+
+volumes:
+  life_os_pgdata:

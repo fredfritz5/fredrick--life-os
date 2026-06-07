@@ -1,0 +1,5 @@
+databases:
+  - name: fredrick-life-os-db
+    databaseName: fredrick_life_os
+    user: fredrick_admin
+    plan: free

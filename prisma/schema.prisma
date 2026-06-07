@@ -1,0 +1,193 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  name      String?
+  createdAt DateTime @default(now())
+
+  profile       UserProfile?
+  sectors       Sector[]
+  yearlyGoals   YearlyGoal[]
+  monthlyGoals  MonthlyGoal[]
+  weeklyGoals   WeeklyGoal[]
+  dailyGoals    DailyGoal[]
+  commitments   AccountabilityCommitment[]
+  sectorNotes   SectorNote[]
+  personalFacts PersonalFact[]
+  achievements  Achievement[]
+  alertSettings AlertSettings?
+}
+
+model UserProfile {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  displayName     String   @default("Fredrick Ochieng")
+  currentFocus    String?
+  bio             String?
+  profilePhotoUrl String?
+  createdAt       DateTime @default(now())
+}
+
+model Sector {
+  id                   String   @id @default(cuid())
+  userId               String
+  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name                 String
+  icon                 String   @default("circle")
+  color                String   @default("#6366f1")
+  description          String?
+  verificationCriteria String?
+  visionRequired       Boolean  @default(true)
+  order                Int      @default(0)
+  createdAt            DateTime @default(now())
+
+  yearlyGoals YearlyGoal[]
+  notes       SectorNote[]
+  commitments AccountabilityCommitment[]
+
+  @@index([userId])
+}
+
+model YearlyGoal {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sectorId  String
+  sector    Sector   @relation(fields: [sectorId], references: [id], onDelete: Cascade)
+  year      Int
+  text      String
+  status    String   @default("active")
+  createdAt DateTime @default(now())
+
+  monthlyGoals MonthlyGoal[]
+
+  @@index([userId])
+  @@index([sectorId])
+}
+
+model MonthlyGoal {
+  id           String     @id @default(cuid())
+  userId       String
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  yearlyGoalId String
+  yearlyGoal   YearlyGoal @relation(fields: [yearlyGoalId], references: [id], onDelete: Cascade)
+  year         Int
+  month        Int
+  text         String
+  status       String     @default("active")
+  createdAt    DateTime   @default(now())
+
+  weeklyGoals WeeklyGoal[]
+
+  @@index([userId])
+  @@index([yearlyGoalId])
+}
+
+model WeeklyGoal {
+  id            String      @id @default(cuid())
+  userId        String
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  monthlyGoalId String
+  monthlyGoal   MonthlyGoal @relation(fields: [monthlyGoalId], references: [id], onDelete: Cascade)
+  year          Int
+  weekNumber    Int
+  text          String
+  status        String      @default("active")
+  createdAt     DateTime    @default(now())
+
+  dailyGoals DailyGoal[]
+
+  @@index([userId])
+  @@index([monthlyGoalId])
+}
+
+model DailyGoal {
+  id                     String     @id @default(cuid())
+  userId                 String
+  user                   User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  weeklyGoalId           String
+  weeklyGoal             WeeklyGoal @relation(fields: [weeklyGoalId], references: [id], onDelete: Cascade)
+  date                   DateTime   @db.Date
+  text                   String
+  status                 String     @default("pending")
+  proofImageUrl          String?
+  verificationResultJson Json?
+  manualOverrideReason   String?
+  completedAt            DateTime?
+  createdAt              DateTime   @default(now())
+
+  @@index([userId])
+  @@index([weeklyGoalId])
+  @@index([date])
+}
+
+model AccountabilityCommitment {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sectorId  String?
+  sector    Sector?  @relation(fields: [sectorId], references: [id], onDelete: SetNull)
+  text      String
+  dateMade  DateTime @default(now()) @db.Date
+  status    String   @default("active")
+  notes     String?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+model SectorNote {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sectorId  String
+  sector    Sector   @relation(fields: [sectorId], references: [id], onDelete: Cascade)
+  date      DateTime @default(now()) @db.Date
+  text      String
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([sectorId])
+}
+
+model PersonalFact {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  factType  String
+  content   String
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+model Achievement {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date        DateTime @default(now()) @db.Date
+  title       String
+  description String?
+  createdAt   DateTime @default(now())
+
+  @@index([userId])
+}
+
+model AlertSettings {
+  id               String   @id @default(cuid())
+  userId           String   @unique
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  soundMutedGlobal Boolean  @default(false)
+  eveningAlertTime String   @default("21:00")
+  createdAt        DateTime @default(now())
+}
