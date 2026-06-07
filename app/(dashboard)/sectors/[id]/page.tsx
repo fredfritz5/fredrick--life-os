@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -26,6 +26,7 @@ export default function SectorPage() {
   const [newNote, setNewNote] = useState('');
   const [commitments, setCommitments] = useState<AccountabilityCommitment[]>([]);
   const [loading, setLoading] = useState(true);
+  const [confirmDeleteSector, setConfirmDeleteSector] = useState(false);
 
   const loadData = useCallback(async () => {
     try {
@@ -93,6 +94,16 @@ export default function SectorPage() {
     }
   }
 
+  async function deleteSector() {
+    const res = await fetch(`/api/sectors/${id}`, { method: 'DELETE' });
+    if (res.ok) {
+      toast.success(`${sector?.name} deleted`);
+      router.push('/');
+    } else {
+      toast.error('Failed to delete sector');
+    }
+  }
+
   if (loading) return <div className="flex items-center justify-center h-64"><div className="animate-pulse text-muted-foreground">Loading…</div></div>;
   if (!sector) return <div className="text-center py-20 text-muted-foreground">Sector not found</div>;
 
@@ -110,10 +121,22 @@ export default function SectorPage() {
         >
           {getSectorIcon(sector.icon)}
         </div>
-        <div>
+        <div className="flex-1 min-w-0">
           <h1 className="text-2xl font-bold">{sector.name}</h1>
           {sector.description && <p className="text-sm text-muted-foreground">{sector.description}</p>}
         </div>
+        {!confirmDeleteSector && (
+          <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive shrink-0" onClick={() => setConfirmDeleteSector(true)}>
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        )}
+        {confirmDeleteSector && (
+          <div className="flex items-center gap-2 shrink-0">
+            <span className="text-sm text-destructive font-medium">Delete sector?</span>
+            <Button size="sm" variant="destructive" onClick={deleteSector}>Yes, delete</Button>
+            <Button size="sm" variant="ghost" onClick={() => setConfirmDeleteSector(false)}>Cancel</Button>
+          </div>
+        )}
       </div>
 
       <Tabs defaultValue="goals">

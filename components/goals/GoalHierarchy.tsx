@@ -1,13 +1,14 @@
 'use client';
 
 import { useState } from 'react';
-import { ChevronRight, ChevronDown, Plus } from 'lucide-react';
+import { ChevronRight, ChevronDown, Plus, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { DailyGoalCard } from './DailyGoalCard';
 import { AddGoalModal } from './AddGoalModal';
 import { getCompletionRate, getCurrentYear, getCurrentMonth, getCurrentWeekNumber } from '@/lib/utils';
+import { toast } from 'sonner';
 import type { YearlyGoal, MonthlyGoal, WeeklyGoal, DailyGoal, Sector } from '@/types';
 
 interface GoalHierarchyProps {
@@ -23,12 +24,12 @@ export function GoalHierarchy({ sector, yearlyGoals, monthlyGoals, weeklyGoals, 
   const [expandedYearly, setExpandedYearly] = useState<Set<string>>(new Set(yearlyGoals.map((g) => g.id)));
   const [expandedMonthly, setExpandedMonthly] = useState<Set<string>>(new Set());
   const [addModal, setAddModal] = useState<{ level: 'yearly' | 'monthly' | 'weekly' | 'daily'; parentId?: string } | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
 
   const currentYear = getCurrentYear();
   const currentMonth = getCurrentMonth();
   const currentWeek = getCurrentWeekNumber();
 
-  // Calculate completions
   function getWeeklyProgress(wg: WeeklyGoal): number {
     const wgDailyGoals = dailyGoals.filter((d) => (d.weeklyGoalId ?? d.weekly_goal_id) === wg.id);
     return getCompletionRate(wgDailyGoals.filter((d) => d.status === 'completed').length, wgDailyGoals.length);
@@ -44,6 +45,49 @@ export function GoalHierarchy({ sector, yearlyGoals, monthlyGoals, weeklyGoals, 
     const ygMonthly = monthlyGoals.filter((m) => (m.yearlyGoalId ?? m.yearly_goal_id) === yg.id);
     if (ygMonthly.length === 0) return 0;
     return Math.round(ygMonthly.reduce((sum, m) => sum + getMonthlyProgress(m), 0) / ygMonthly.length);
+  }
+
+  async function deleteGoal(level: 'yearly' | 'monthly' | 'weekly' | 'daily', id: string) {
+    const endpoints: Record<string, string> = {
+      yearly: '/api/yearly-goals',
+      monthly: '/api/monthly-goals',
+      weekly: '/api/weekly-goals',
+      daily: '/api/daily-goals',
+    };
+    const res = await fetch(`${endpoints[level]}/${id}`, { method: 'DELETE' });
+    if (res.ok) {
+      toast.success('Deleted');
+      setConfirmDelete(null);
+      onRefresh();
+    } else {
+      toast.error('Failed to delete');
+    }
+  }
+
+  function DeleteButton({ id, level }: { id: string; level: 'yearly' | 'monthly' | 'weekly' | 'daily' }) {
+    const isConfirming = confirmDelete === id;
+    if (isConfirming) {
+      return (
+        <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
+          <Button size="sm" variant="destructive" className="h-6 text-xs px-2" onClick={() => deleteGoal(level, id)}>
+            Delete
+          </Button>
+          <Button size="sm" variant="ghost" className="h-6 text-xs px-2" onClick={() => setConfirmDelete(null)}>
+            Cancel
+          </Button>
+        </div>
+      );
+    }
+    return (
+      <Button
+        size="sm"
+        variant="ghost"
+        className="shrink-0 h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
+        onClick={(e) => { e.stopPropagation(); setConfirmDelete(id); }}
+      >
+        <Trash2 className="h-3 w-3" />
+      </Button>
+    );
   }
 
   return (
@@ -71,7 +115,6 @@ export function GoalHierarchy({ sector, yearlyGoals, monthlyGoals, weeklyGoals, 
 
         return (
           <div key={yg.id} className="border rounded-lg overflow-hidden">
-            {/* Yearly goal header */}
             <div
               className="flex items-center gap-3 p-4 bg-muted/30 cursor-pointer hover:bg-muted/50 transition-colors"
               onClick={() => setExpandedYearly((prev) => {
@@ -89,14 +132,17 @@ export function GoalHierarchy({ sector, yearlyGoals, monthlyGoals, weeklyGoals, 
                 <p className="text-sm font-medium mt-0.5">{yg.text}</p>
                 <Progress value={ygProgress} className="h-1 mt-2" />
               </div>
-              <Button
-                size="sm"
-                variant="ghost"
-                className="shrink-0 h-7 text-xs"
-                onClick={(e) => { e.stopPropagation(); setAddModal({ level: 'monthly', parentId: yg.id }); }}
-              >
-                <Plus className="h-3 w-3 mr-1" /> Monthly
-              </Button>
+              <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-7 text-xs"
+                  onClick={() => setAddModal({ level: 'monthly', parentId: yg.id })}
+                >
+                  <Plus className="h-3 w-3 mr-1" /> Monthly
+                </Button>
+                <DeleteButton id={yg.id} level="yearly" />
+              </div>
             </div>
 
             {isExpanded && (
@@ -116,7 +162,6 @@ export function GoalHierarchy({ sector, yearlyGoals, monthlyGoals, weeklyGoals, 
 
                   return (
                     <div key={mg.id} className="border rounded-lg overflow-hidden">
-                      {/* Monthly goal row */}
                       <div
                         className={`flex items-center gap-3 p-3 cursor-pointer hover:bg-muted/30 transition-colors ${isCurrentMonth ? 'bg-primary/5' : ''}`}
                         onClick={() => setExpandedMonthly((prev) => {
@@ -134,14 +179,17 @@ export function GoalHierarchy({ sector, yearlyGoals, monthlyGoals, weeklyGoals, 
                           </div>
                           <p className="text-sm mt-0.5">{mg.text}</p>
                         </div>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="shrink-0 h-6 text-xs px-2"
-                          onClick={(e) => { e.stopPropagation(); setAddModal({ level: 'weekly', parentId: mg.id }); }}
-                        >
-                          <Plus className="h-3 w-3" />
-                        </Button>
+                        <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-6 text-xs px-2"
+                            onClick={() => setAddModal({ level: 'weekly', parentId: mg.id })}
+                          >
+                            <Plus className="h-3 w-3" />
+                          </Button>
+                          <DeleteButton id={mg.id} level="monthly" />
+                        </div>
                       </div>
 
                       {mgExpanded && (
@@ -169,20 +217,30 @@ export function GoalHierarchy({ sector, yearlyGoals, monthlyGoals, weeklyGoals, 
                                     </div>
                                     <p className="text-xs font-medium mt-0.5">{wg.text}</p>
                                   </div>
-                                  <Button
-                                    size="sm"
-                                    variant="ghost"
-                                    className="shrink-0 h-6 text-xs px-2"
-                                    onClick={() => setAddModal({ level: 'daily', parentId: wg.id })}
-                                  >
-                                    <Plus className="h-3 w-3" />
-                                  </Button>
+                                  <div className="flex items-center gap-1 shrink-0">
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      className="h-6 text-xs px-2"
+                                      onClick={() => setAddModal({ level: 'daily', parentId: wg.id })}
+                                    >
+                                      <Plus className="h-3 w-3" />
+                                    </Button>
+                                    <DeleteButton id={wg.id} level="weekly" />
+                                  </div>
                                 </div>
 
                                 {wgDailyGoals.length > 0 && (
                                   <div className="p-2 space-y-1 bg-background">
                                     {wgDailyGoals.map((dg) => (
-                                      <DailyGoalCard key={dg.id} goal={dg} sector={sector} onUpdate={onRefresh} compact />
+                                      <DailyGoalCard
+                                        key={dg.id}
+                                        goal={dg}
+                                        sector={sector}
+                                        onUpdate={onRefresh}
+                                        onDelete={() => deleteGoal('daily', dg.id)}
+                                        compact
+                                      />
                                     ))}
                                   </div>
                                 )}

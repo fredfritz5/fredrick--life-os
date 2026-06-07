@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { CheckCircle2, Clock, SkipForward, Image as ImageIcon, AlertTriangle } from 'lucide-react';
+import { CheckCircle2, Clock, SkipForward, Image as ImageIcon, AlertTriangle, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ProofUploadModal } from './ProofUploadModal';
@@ -12,10 +12,12 @@ interface DailyGoalCardProps {
   goal: DailyGoal;
   sector: Sector;
   onUpdate: () => void;
+  onDelete?: () => void;
   compact?: boolean;
 }
 
-export function DailyGoalCard({ goal, sector, onUpdate, compact = false }: DailyGoalCardProps) {
+export function DailyGoalCard({ goal, sector, onUpdate, onDelete, compact = false }: DailyGoalCardProps) {
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [proofOpen, setProofOpen] = useState(false);
 
   const statusConfig = {
@@ -57,16 +59,28 @@ export function DailyGoalCard({ goal, sector, onUpdate, compact = false }: Daily
           )}
         </div>
 
-        {goal.status === 'pending' && (
-          <Button
-            size="sm"
-            variant="outline"
-            className="shrink-0 text-xs h-7"
-            onClick={() => setProofOpen(true)}
-          >
-            Complete
-          </Button>
-        )}
+        <div className="flex items-center gap-1 shrink-0">
+          {goal.status === 'pending' && (
+            <Button size="sm" variant="outline" className="text-xs h-7" onClick={() => setProofOpen(true)}>
+              Complete
+            </Button>
+          )}
+          {onDelete && !confirmingDelete && (
+            <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive" onClick={() => setConfirmingDelete(true)}>
+              <Trash2 className="h-3 w-3" />
+            </Button>
+          )}
+          {onDelete && confirmingDelete && (
+            <>
+              <Button size="sm" variant="destructive" className="h-6 text-xs px-2" onClick={() => { setConfirmingDelete(false); onDelete(); }}>
+                Delete
+              </Button>
+              <Button size="sm" variant="ghost" className="h-6 text-xs px-2" onClick={() => setConfirmingDelete(false)}>
+                Cancel
+              </Button>
+            </>
+          )}
+        </div>
       </div>
 
       <ProofUploadModal
